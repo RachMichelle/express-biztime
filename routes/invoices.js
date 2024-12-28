@@ -62,7 +62,7 @@ router.put('/:id', async (req, res, next) => {
         if (result.rows.length === 0) {
             throw new ExpressError('Invoice not found, unable to update', 404);
         }
-        return res.json({ Invoice: result.rows[0] });
+        return res.json({ invoice: result.rows[0] });
     } catch (e) {
         return next(e);
     }
@@ -71,7 +71,10 @@ router.put('/:id', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
     try {
         const id = req.params.id;
-        const result = await db.query(`DELETE FROM invoices WHERE id = $1`, [id]);
+        const result = await db.query(`DELETE FROM invoices WHERE id = $1 RETURNING id`, [id]);
+        if (result.rows.length === 0) {
+            throw new ExpressError('Invoice not found', 404);
+        }
         return res.json({ message: 'Deleted' });
     } catch (e) {
         return next(e);
