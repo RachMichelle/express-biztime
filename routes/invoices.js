@@ -14,12 +14,14 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
     try {
-        const id = req.params.id;
-        const result = await db.query(`SELECT i.id, i.comp_code, c.name, c.description, i.amt, i.paid, i.add_date, i.paid_date FROM invoices AS i JOIN companies AS c ON i.comp_code = c.code WHERE i.id=$1`, [id]);
+        const invId = req.params.id;
+        const result = await db.query(`SELECT i.id, c.code, c.name, c.description, i.amt, i.paid, i.add_date, i.paid_date FROM invoices AS i JOIN companies AS c ON i.comp_code = c.code WHERE i.id=$1`, [invId]);
         if (result.rows.length === 0) {
             throw new ExpressError('Invoice not found', 404)
         }
-        return res.json({ invoice: result.rows[0] });
+        const {id, amt, paid, add_date, paid_date } = result.rows[0];
+        const {code, name, description} = result.rows[0];
+        return res.json({ invoice: {id, amt, paid, add_date, paid_date, company: {code, name, description}} });
     } catch (e) {
         return next(e)
     }
@@ -27,12 +29,16 @@ router.get('/:id', async (req, res, next) => {
 
 router.get('/companies/:code', async (req, res, next) => {
     try {
-        const code = req.params.code;
-        const result = await db.query(`SELECT c.code, c.name, c.description, i.id, i.amt, i.paid, i.add_date, i.paid_date FROM invoices AS i JOIN companies AS c ON i.comp_code = c.code WHERE i.comp_code=$1`, [code]);
-        if (result.rows.length === 0) {
+        const compCode = req.params.code;
+        const compResult = db.query(`SELECT code, name, description FROM companies WHERE code = $1`, [compCode]);
+        const invResult = db.query(`SELECT id, amt, paid, add_date, paid_date FROM invoices WHERE comp_code = $1`, [compCode])
+        const [companyInfo, invoices] = await Promise.all([compResult, invResult]);
+        if (companyInfo.rows.length === 0) {
             throw new ExpressError('Company not found', 404)
         }
-        return res.json({ invoices: result.rows });
+        const company = companyInfo.rows[0];
+        company.invoices = invoices.rows;
+        return res.json({company});
     } catch (e) {
         return next(e)
     }
