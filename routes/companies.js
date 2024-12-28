@@ -19,7 +19,7 @@ router.get('/:code', async (req, res, next) => {
         if (result.rows.length === 0) {
             throw new ExpressError('Invoice not found', 404)
         }
-        return res.json({ Company: result.rows[0] });
+        return res.json({ company: result.rows[0] });
     } catch (e) {
         return next(e)
     }
@@ -52,7 +52,10 @@ router.put('/:code', async (req, res, next) => {
 router.delete('/:code', async (req, res, next) => {
     try {
         const code = req.params.code;
-        const result = await db.query(`DELETE FROM companies WHERE code = $1`, [code]);
+        const result = await db.query(`DELETE FROM companies WHERE code = $1 RETURNING code`, [code]);
+        if (result.rows.length === 0){
+            throw new ExpressError('Company not found', 404)
+        }
         return res.json({ message: 'Deleted' });
     } catch (e) {
         return next(e);
